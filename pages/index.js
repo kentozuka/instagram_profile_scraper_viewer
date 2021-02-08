@@ -1,65 +1,79 @@
+import { signOut, getSession } from 'next-auth/client'
 import Head from 'next/head'
-import styles from '../styles/Home.module.css'
 
-export default function Home() {
+import db from '../src/db'
+
+import Profile from '../components/Profile'
+import Navigation from '../components/Navigation'
+import Bottombar from '../components/Bottombar'
+
+export default function Home({ user, profiles }) {
   return (
-    <div className={styles.container}>
+    <>
       <Head>
-        <title>Create Next App</title>
+        <title>Viewer</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+      <div className="lg:pt-4 lg:px-12">
+        <Navigation user={user} />
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
+        <div className="pb-28">
+          {
+            !profiles.length && <>
+              <div className="w-full h-screen flex items-center justify-center">
+                <h1 className="p-4 rounded-lg bg-clubhouse-deep text-clubhouse-white">Add a user!</h1>
+              </div>
+            </>
+          }
 
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+          <div className="flex flex-wrap">
+            {
+              profiles && <>
+                {profiles.map((profile) => {
+                  return <Profile key={profile.id} profile={profile} />
+                })}
+              </>
+            }
+          </div>
         </div>
-      </main>
 
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
-        </a>
-      </footer>
-    </div>
+        <Bottombar />
+      </div>
+    </>
   )
+}
+
+export async function getServerSideProps(ctx) {
+  const session = await getSession(ctx)
+  if (!session) {
+    ctx.res.writeHead(302, { Location: '/unauthenticated' })
+    ctx.res.end()
+    return { props: { user: null } }
+  }
+
+  const slcts = [
+    'id',
+    'username',
+    'full_name',
+    'biography',
+    'picture',
+    'is_verified',
+    'post',
+    'follow',
+    'followed_by',
+    'last_fetched'
+  ]
+  const profiles = await db()
+    .select(slcts)
+    .from('Profile')
+    .where('is_private', false)
+    .limit(100)
+
+  return {
+    props: {
+      user: session.user,
+      profiles
+    },
+  }
 }
