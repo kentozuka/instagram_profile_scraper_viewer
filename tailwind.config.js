@@ -18,7 +18,7 @@ const colors = {
 }
 
 module.exports = {
-  purge: [],
+  purge: ['./components/**.js', './layouts/**.js', './pages/**/**.js'],
   darkMode: false, // or 'media' or 'class'
   theme: {
     colors
